@@ -1,0 +1,38 @@
+# Local aidbt runtime data
+/.aidbt/
+
+# Local Go caches used by Codex/sandboxed builds
+/.gocache/
+/.gomodcache/
+
+# Build outputs
+/aidbt
+/aidbt.exe
+/bin/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Test and coverage output
+coverage.out
+*.coverprofile
+
+# Logs and temporary files
+*.log
+*.tmp
+/tmp/
+
+# Local environment files
+.env
+.env.*
+
+# Editor and OS metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
