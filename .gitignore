@@ -36,3 +36,4 @@ coverage.out
 *.swo
 Thumbs.db
 .DS_Store
+AGENTS.md
