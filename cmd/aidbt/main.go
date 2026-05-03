@@ -11,6 +11,8 @@ import (
 	"github.com/aidbt-tool/aidbt/internal/repl"
 )
 
+var version = "dev"
+
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		fmt.Fprintf(os.Stderr, "错误：%v\n", err)
@@ -29,7 +31,7 @@ func run(args []string) error {
 		case "config":
 			return runConfig(args[1:])
 		case "version", "--version", "-v":
-			fmt.Println("aidbt v0.1.0")
+			fmt.Printf("aidbt v%s\n", version)
 			return nil
 		case "help", "--help", "-h":
 			printUsage()
