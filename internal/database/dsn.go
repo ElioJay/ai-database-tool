@@ -77,7 +77,7 @@ func maskDSN(dsn string) string {
 	}
 	colon := strings.LastIndex(dsn[:at], ":")
 	if colon <= 0 {
-		return dsn
+		return "***"
 	}
 	return dsn[:colon+1] + "***" + dsn[at:]
 }

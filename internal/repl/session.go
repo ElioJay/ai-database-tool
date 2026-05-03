@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 
@@ -16,6 +17,8 @@ import (
 	"github.com/aidbt-tool/aidbt/internal/render"
 	"github.com/aidbt-tool/aidbt/internal/sqlplan"
 )
+
+const maxHistoryRounds = 10
 
 type Session struct {
 	cfg           *config.Config
@@ -52,7 +55,9 @@ func NewSession(cfg *config.Config, cd config.ConfigDir) (*Session, error) {
 		return nil, err
 	}
 	s := &Session{cfg: cfg, configDir: cd, prov: prov, db: db, connName: connName, conn: cc, recorder: rec}
-	if err := s.RefreshSchema(context.Background()); err != nil {
+	schemaCtx, schemaCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer schemaCancel()
+	if err := s.RefreshSchema(schemaCtx); err != nil {
 		rec.LogSystem("schema 探测失败: " + err.Error())
 		s.schemaSummary = "schema 探测失败：" + err.Error()
 	}
@@ -143,9 +148,11 @@ func (s *Session) HandleQuery(ctx context.Context, input string) error {
 	s.recorder.LogUser(input)
 	s.recorder.LogAI(plan.Explanation, plan.SQL)
 
-	if !askConfirm(plan, s.connName, s.conn.Type) {
-		fmt.Println("已取消。")
-		return nil
+	if plan.NeedConfirm {
+		if !askConfirm(plan, s.connName, s.conn.Type) {
+			fmt.Println("已取消。")
+			return nil
+		}
 	}
 	result, err := s.execute(ctx, plan)
 	if err != nil {
@@ -157,6 +164,9 @@ func (s *Session) HandleQuery(ctx context.Context, input string) error {
 		provider.Message{Role: "user", Content: input},
 		provider.Message{Role: "assistant", Content: raw},
 	)
+	if len(s.history) > maxHistoryRounds*2 {
+		s.history = s.history[len(s.history)-maxHistoryRounds*2:]
+	}
 	return nil
 }
 
@@ -208,7 +218,9 @@ func (s *Session) applyMeta(meta MetaResult) {
 		fmt.Println("已清空对话历史。")
 	}
 	if meta.RefreshSchema {
-		if err := s.RefreshSchema(context.Background()); err != nil {
+		schemaCtx, schemaCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer schemaCancel()
+		if err := s.RefreshSchema(schemaCtx); err != nil {
 			fmt.Printf("schema 刷新失败：%v\n", err)
 		} else {
 			fmt.Println("schema 已刷新。")

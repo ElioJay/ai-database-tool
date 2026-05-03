@@ -1,6 +1,9 @@
 package provider
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type Message struct {
 	Role    string
@@ -19,20 +22,20 @@ type Provider interface {
 }
 
 func Collect(ch <-chan Chunk, render func(string)) (string, error) {
-	var out string
+	var b strings.Builder
 	for chunk := range ch {
 		if chunk.Err != nil {
-			return out, chunk.Err
+			return b.String(), chunk.Err
 		}
 		if chunk.Done {
 			break
 		}
 		if chunk.Delta != "" {
-			out += chunk.Delta
+			b.WriteString(chunk.Delta)
 			if render != nil {
 				render(chunk.Delta)
 			}
 		}
 	}
-	return out, nil
+	return b.String(), nil
 }

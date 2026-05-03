@@ -51,7 +51,12 @@ func writeRow(b *strings.Builder, row []string, widths []int, maxCellWidth int) 
 		if i < len(row) {
 			cell = truncate(row[i], maxCellWidth)
 		}
-		fmt.Fprintf(b, " %-*s |", width, cell)
+		b.WriteString(" ")
+		b.WriteString(cell)
+		for pad := width - displayLen(cell); pad > 0; pad-- {
+			b.WriteByte(' ')
+		}
+		b.WriteString(" |")
 	}
 	b.WriteString("\n")
 }
@@ -67,16 +72,56 @@ func writeSep(b *strings.Builder, widths []int) {
 }
 
 func truncate(s string, width int) string {
-	rs := []rune(s)
-	if len(rs) <= width {
+	if displayLen(s) <= width {
 		return s
 	}
 	if width <= 3 {
-		return string(rs[:width])
+		return cutToWidth(s, width)
 	}
-	return string(rs[:width-3]) + "..."
+	return cutToWidth(s, width-3) + "..."
+}
+
+func cutToWidth(s string, w int) string {
+	dw := 0
+	for i, r := range s {
+		rw := 1
+		if isWide(r) {
+			rw = 2
+		}
+		if dw+rw > w {
+			return s[:i]
+		}
+		dw += rw
+	}
+	return s
+}
+
+func isWide(r rune) bool {
+	return r >= 0x1100 &&
+		(r <= 0x115F ||
+			r == 0x2329 || r == 0x232A ||
+			(r >= 0x2E80 && r <= 0x303E) ||
+			(r >= 0x3040 && r <= 0x33BF) ||
+			(r >= 0x3400 && r <= 0x4DBF) ||
+			(r >= 0x4E00 && r <= 0xA4CF) ||
+			(r >= 0xAC00 && r <= 0xD7A3) ||
+			(r >= 0xF900 && r <= 0xFAFF) ||
+			(r >= 0xFE10 && r <= 0xFE19) ||
+			(r >= 0xFE30 && r <= 0xFE6B) ||
+			(r >= 0xFF01 && r <= 0xFF60) ||
+			(r >= 0xFFE0 && r <= 0xFFE6) ||
+			(r >= 0x20000 && r <= 0x2FFFD) ||
+			(r >= 0x30000 && r <= 0x3FFFD))
 }
 
 func displayLen(s string) int {
-	return len([]rune(s))
+	w := 0
+	for _, r := range s {
+		if isWide(r) {
+			w += 2
+		} else {
+			w++
+		}
+	}
+	return w
 }

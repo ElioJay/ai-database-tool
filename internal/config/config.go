@@ -189,7 +189,7 @@ func MaskDSN(dsn string) string {
 	if at > 0 && colon > 0 {
 		return dsn[:colon+1] + "***" + dsn[at:]
 	}
-	return dsn
+	return "***"
 }
 
 func envName(name string) string {
