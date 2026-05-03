@@ -34,7 +34,11 @@ func (s Schema) Summary(opts SchemaOptions) string {
 			}
 			cols = append(cols, item)
 		}
-		out = append(out, fmt.Sprintf("%s(%s)", table.Name, strings.Join(cols, ", ")))
+		header := table.Name
+		if table.Comment != "" {
+			header += " -- " + table.Comment
+		}
+		out = append(out, fmt.Sprintf("%s(%s)", header, strings.Join(cols, ", ")))
 	}
 	if len(out) == 0 {
 		return "未探测到可用表结构。"

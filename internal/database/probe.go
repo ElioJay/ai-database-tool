@@ -38,7 +38,28 @@ order by table_name, ordinal_position`, database)
 		return Schema{}, err
 	}
 	defer rows.Close()
-	return scanSchemaRows(rows)
+	schema, err := scanSchemaRows(rows)
+	if err != nil {
+		return schema, err
+	}
+	comments, err := probeMySQLComments(ctx, db, database)
+	if err != nil {
+		return schema, nil
+	}
+	applyComments(&schema, comments)
+	return schema, nil
+}
+
+func probeMySQLComments(ctx context.Context, db *sql.DB, database string) (map[string]string, error) {
+	rows, err := db.QueryContext(ctx, `
+select table_name, table_comment
+from information_schema.tables
+where table_schema = ? and table_comment != ''`, database)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanCommentRows(rows)
 }
 
 func probeOracleLike(ctx context.Context, db *sql.DB, schema string, dm bool) (Schema, error) {
@@ -63,7 +84,52 @@ order by c.table_name, c.column_id`
 		return Schema{}, err
 	}
 	defer rows.Close()
-	return scanSchemaRows(rows)
+	s, err := scanSchemaRows(rows)
+	if err != nil {
+		return s, err
+	}
+	comments, err := probeOracleComments(ctx, db, schema, dm)
+	if err != nil {
+		return s, nil
+	}
+	applyComments(&s, comments)
+	return s, nil
+}
+
+func probeOracleComments(ctx context.Context, db *sql.DB, schema string, dm bool) (map[string]string, error) {
+	query := `select table_name, comments from all_tab_comments where owner = :1 and comments is not null`
+	if dm {
+		query = strings.ReplaceAll(query, ":1", "?")
+	}
+	rows, err := db.QueryContext(ctx, query, strings.ToUpper(schema))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanCommentRows(rows)
+}
+
+func scanCommentRows(rows *sql.Rows) (map[string]string, error) {
+	m := map[string]string{}
+	for rows.Next() {
+		var name, comment string
+		if err := rows.Scan(&name, &comment); err != nil {
+			return nil, err
+		}
+		comment = strings.TrimSpace(comment)
+		if comment != "" {
+			m[name] = comment
+		}
+	}
+	return m, rows.Err()
+}
+
+func applyComments(schema *Schema, comments map[string]string) {
+	for i := range schema.Tables {
+		if c, ok := comments[schema.Tables[i].Name]; ok {
+			schema.Tables[i].Comment = c
+		}
+	}
 }
 
 func scanSchemaRows(rows *sql.Rows) (Schema, error) {
