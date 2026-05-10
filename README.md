@@ -71,7 +71,7 @@ default_connection = "dev"
 
 [providers.openai]
 base_url = "https://api.openai.com/v1"
-api_key = "sk-xxx"
+api_key = "<your-api-key>"
 model = "gpt-4o"
 
 [connections.dev]
@@ -79,7 +79,7 @@ type = "mysql"
 host = "127.0.0.1"
 port = 3306
 username = "root"
-password = "secret"
+password = "<your-db-password>"
 database = "app"
 schema = ""
 include = ["users", "orders*"]
@@ -119,3 +119,6 @@ max_rows = 100
 - `UPDATE`、`DELETE` 未检测到 `WHERE` 时归为 high。
 - v1 不提供自动事务确认/回滚，不提供执行失败后的自动修正循环。
 
+## License
+
+Apache License 2.0
